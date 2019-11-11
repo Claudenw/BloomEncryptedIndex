@@ -5,23 +5,30 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.apache.commons.collections4.bloomfilter.BloomFilter;
+import org.apache.commons.collections4.bloomfilter.BloomFilter.Shape;
 import org.apache.commons.collections4.bloomfilter.Hasher;
+import org.apache.commons.collections4.bloomfilter.hasher.Murmur128;
 import org.xenei.bloom.GeoNameHasher;
-import org.xenei.bloom.multidimensional.FlatBloofi;
+import org.xenei.bloom.multidimensional.Container;
+import org.xenei.bloom.multidimensional.Container.Index;
+import org.xenei.bloom.multidimensional.Container.Storage;
+import org.xenei.bloom.multidimensional.ContainerImpl;
+import org.xenei.bloom.multidimensional.index.FlatBloofi;
+import org.xenei.bloom.multidimensional.storage.InMemory;
 import org.xenei.geoname.GeoName;
 import org.xenei.geoname.GeoNameIterator;
 
 public class Demo {
 
-    private List<byte[]> encryptedGeoName;
-    private FlatBloofi index;
+    private Container<byte[]> container;
     private List<GeoName> sample;
 
 
     public Demo() throws IOException {
-        encryptedGeoName = new ArrayList<byte[]>();
-        index = new FlatBloofi( GeoNameHasher.shape );
+        Shape shape = new Shape( Murmur128.NAME, 5000, 1.0/10000 );
+        Storage<byte[]> storage = new InMemory<byte[]>();
+        Index index = new FlatBloofi( shape );
+        container = new ContainerImpl<byte[]>( shape, storage, index );
         sample = new ArrayList<GeoName>();
 
         // populate the index.
@@ -29,13 +36,12 @@ public class Demo {
         while (iter.hasNext())
         {
             GeoName geoName = iter.next();
-            encryptedGeoName.add( encrypt( geoName ));
-            index.insert( GeoNameHasher.createHasher(geoName), encryptedGeoName.size() );
-            if (index.getSize() % 1000 == 0)
+            Hasher hasher = GeoNameHasher.createHasher(geoName);
+            if (container.getValueCount() % 1000 == 0)
             {
                 sample.add( geoName );
             }
-
+            container.put( hasher, encrypt( geoName ));
         }
     }
 
@@ -48,23 +54,8 @@ public class Demo {
         return sample.stream();
     }
 
-    public List<Integer> getIds( BloomFilter bf )
-    {
-        return getIds( bf.getHasher() );
-    }
-
-    public List<Integer> getIds( Hasher hasher )
-    {
-        return index.search( hasher );
-    }
-
-    public Stream<byte[]> getGeoNames( BloomFilter bf )
-    {
-        return getGeoNames( bf.getHasher() );
-    }
-
     public Stream<byte[]> getGeoNames( Hasher hasher )
     {
-        return index.search( hasher ).stream().map( i -> encryptedGeoName.get(i) );
+        return container.get( hasher );
     }
 }

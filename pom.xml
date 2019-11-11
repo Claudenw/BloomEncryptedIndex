@@ -17,6 +17,11 @@
 			<artifactId>commons-collections4</artifactId>
 			<version>4.5-SNAPSHOT</version>
 		</dependency>
-		
+
+		<dependency>
+			<groupId>MultidimensionalBloom</groupId>
+			<artifactId>MultidimensionalBloom</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 </project>
