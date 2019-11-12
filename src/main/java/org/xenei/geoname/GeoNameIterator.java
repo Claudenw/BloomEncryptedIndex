@@ -34,7 +34,7 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() throws IOException {
         bufferedReader.close();
     }
 

@@ -32,16 +32,18 @@ public class Demo {
         sample = new ArrayList<GeoName>();
 
         // populate the index.
-        GeoNameIterator iter = new GeoNameIterator( GeoNameIterator.DEFAULT_INPUT );
-        while (iter.hasNext())
+        try (GeoNameIterator iter = new GeoNameIterator( GeoNameIterator.DEFAULT_INPUT ))
         {
-            GeoName geoName = iter.next();
-            Hasher hasher = GeoNameHasher.createHasher(geoName);
-            if (container.getValueCount() % 1000 == 0)
+            while (iter.hasNext())
             {
-                sample.add( geoName );
+                GeoName geoName = iter.next();
+                Hasher hasher = GeoNameHasher.createHasher(geoName);
+                if (container.getValueCount() % 1000 == 0)
+                {
+                    sample.add( geoName );
+                }
+                container.put( hasher, encrypt( geoName ));
             }
-            container.put( hasher, encrypt( geoName ));
         }
     }
 
