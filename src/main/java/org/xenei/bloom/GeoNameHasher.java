@@ -8,8 +8,8 @@ import org.xenei.geoname.GeoName;
 
 public class GeoNameHasher {
 
-    public final static int POPULATION = 10000000; // 10 million
-    public final static double PROBABILITY = 1.0/100000;  //1 in 100 thousand
+    public final static int POPULATION = 3; // 10 million
+    public final static double PROBABILITY = 1.0/1000000;  //1 in 1 million
 
     public final static Shape shape = new Shape(Murmur128.NAME, POPULATION, PROBABILITY );
 

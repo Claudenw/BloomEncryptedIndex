@@ -15,6 +15,8 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
 
     private final BufferedReader bufferedReader;
     private GeoName next;
+    private GeoName.Serde serde;
+    private int count=0;
 
     public GeoNameIterator(URL inputFile) throws IOException {
         this(inputFile.openStream());
@@ -31,6 +33,7 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
             bufferedReader = new BufferedReader(reader);
         }
         next = null;
+        serde = new GeoName.Serde();
     }
 
     @Override
@@ -41,11 +44,17 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
     @Override
     public boolean hasNext() {
         if (next == null) {
+            String s;
             try {
-                next = GeoName.parse(bufferedReader.readLine());
+                s = bufferedReader.readLine();
             } catch (IOException e) {
                 return false;
             }
+            if (s == null)
+            {
+                return false;
+            }
+            next = serde.deserialize(s);
         }
         return true;
     }
