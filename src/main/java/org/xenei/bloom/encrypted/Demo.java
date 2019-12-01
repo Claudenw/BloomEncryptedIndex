@@ -11,12 +11,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.UUID;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.collections4.Transformer;
+import org.apache.commons.collections4.bloomfilter.BloomFilter;
 import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.Hasher.Factory;
 import org.apache.commons.collections4.bloomfilter.hasher.DynamicHasher;
@@ -30,6 +33,7 @@ import org.xenei.bloom.multidimensional.ContainerImpl;
 import org.xenei.bloom.multidimensional.index.FlatBloofi;
 import org.xenei.bloom.multidimensional.index.Linear;
 import org.xenei.bloom.multidimensional.index.RangePacked;
+import org.xenei.bloom.multidimensional.index.Trie8;
 import org.xenei.bloom.multidimensional.storage.InMemory;
 import org.xenei.geoname.GeoName;
 import org.xenei.geoname.GeoNameIterator;
@@ -44,6 +48,7 @@ public class Demo {
     public static void main(String[] args) throws IOException, GeneralSecurityException
     {
         Demo demo = new Demo();
+
         System.out.println( String.format( "items: %s filters: %s", demo.container.getValueCount(), demo.container.getFilterCount()));
         try (BufferedReader reader =
                 new BufferedReader(new InputStreamReader(System.in)))
@@ -86,9 +91,9 @@ public class Demo {
     }
 
     public Demo() throws IOException, GeneralSecurityException {
-        Storage<byte[]> storage = new InMemory<byte[]>();
-        Index index = new RangePacked( GeoNameHasher.shape );
-        container = new ContainerImpl<byte[]>( GeoNameHasher.shape, storage, index );
+        Storage<byte[],UUID> storage = new InMemory<byte[],UUID>();
+        Index<UUID> index = new RangePacked<UUID>( new Func(), GeoNameHasher.shape );
+        container = new ContainerImpl<byte[],UUID>( GeoNameHasher.shape, storage, index );
         sample = new ArrayList<GeoName>();
         serde = new GeoName.Serde();
         SecretKeySpec secretKey = Ende_AES256.makeKey( "MySecretKey");
@@ -102,13 +107,19 @@ public class Demo {
                 Hasher hasher = GeoNameHasher.createHasher(geoName);
                 if (container.getValueCount() % 1000 == 0)
                 {
-                    System.out.println( container.getValueCount() );
+                    System.out.println(
+                            String.format( "%s: %s names detected, %s per location %s max", container.getValueCount(), GeoNameHasher.names,
+                                    (1.0 * GeoNameHasher.names)/container.getValueCount(),
+                                    GeoNameHasher.maxNames));
                     sample.add( geoName );
                 }
                 container.put( hasher, encrypt( geoName ));
             }
         }
 
+        System.out.println( String.format( "%s names detected, %s per location", GeoNameHasher.names,
+                (1.0 * GeoNameHasher.names)/container.getValueCount()));
+        System.out.println( GeoNameHasher.shape.toString() );
 
     }
 
@@ -140,4 +151,35 @@ public class Demo {
     public Container<byte[]> getContainer() {
         return container;
     }
+
+    /**
+     * A standard Func to use in testing where UUID creation is desired.
+     *
+     */
+    public static class Func implements Function<BloomFilter,UUID> {
+
+        private byte[] getBytes( BloomFilter filter)
+        {
+            byte[] buffer = new byte[filter.getShape().getNumberOfBytes()];
+            long[] lBuffer = filter.getBits();
+            for (int i=0;i<buffer.length;i++)
+            {
+                int longIdx = i / Long.BYTES;
+                int longOfs = i % Long.BYTES;
+                if (longIdx >= lBuffer.length)
+                {
+                    return buffer;
+                }
+                buffer[i] = (byte) ((lBuffer[longIdx]>>(Byte.SIZE * longOfs))  & 0xFFL);
+            }
+            return buffer;
+        }
+
+        @Override
+        public UUID apply(BloomFilter filter) {
+            return UUID.nameUUIDFromBytes(getBytes( filter ));
+        }
+
+    }
+
 }
