@@ -3,27 +3,25 @@ package org.xenei.bloom;
 import org.apache.commons.collections4.bloomfilter.BloomFilter.Shape;
 import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.hasher.DynamicHasher;
-import org.apache.commons.collections4.bloomfilter.hasher.Murmur128;
+import org.apache.commons.collections4.bloomfilter.hasher.HashFunction;
+import org.apache.commons.collections4.bloomfilter.hasher.function.Murmur128x86Cyclic;
 import org.xenei.geoname.GeoName;
 
 public class GeoNameHasher {
 
-    public static int names = 0;
-    public static int maxNames = 0;
-    public final static int POPULATION = 300; // number of items in each filter
+    public final static int POPULATION = 10; // number of items in each filter
     public final static double PROBABILITY = 1.0/1000000;  //1 in 1 million
-
-    public final static Shape shape = new Shape(Murmur128.NAME, POPULATION, PROBABILITY );
+    private final static HashFunction hashFunction = new Murmur128x86Cyclic();
+    public final static Shape shape = new Shape( hashFunction, POPULATION, PROBABILITY );
 
     public static Hasher createHasher( GeoName geoName ) {
-        Hasher.Builder builder = DynamicHasher.Factory.DEFAULT.useFunction( Murmur128.NAME )
+        Hasher.Builder builder = new DynamicHasher.Builder( hashFunction )
         .with( geoName.feature_code).with( geoName.country_code );
         String[] lst = geoName.alternatenames.split( ",");
-        names += lst.length;
-        maxNames = Integer.max(maxNames, lst.length);
-        for (String s : lst)
+        int limit = Integer.min(POPULATION, lst.length );
+        for (int i=0;i<limit;i++)
         {
-            builder.with( s.trim() );
+            builder.with( lst[i].trim() );
         }
         return builder.build();
     }

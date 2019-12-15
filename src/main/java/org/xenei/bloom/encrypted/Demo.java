@@ -21,9 +21,9 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.collections4.Transformer;
 import org.apache.commons.collections4.bloomfilter.BloomFilter;
 import org.apache.commons.collections4.bloomfilter.Hasher;
-import org.apache.commons.collections4.bloomfilter.Hasher.Factory;
 import org.apache.commons.collections4.bloomfilter.hasher.DynamicHasher;
-import org.apache.commons.collections4.bloomfilter.hasher.Murmur128;
+import org.apache.commons.collections4.bloomfilter.hasher.HashFunction;
+import org.apache.commons.collections4.bloomfilter.hasher.function.Murmur128x86Cyclic;
 import org.apache.commons.collections4.iterators.TransformIterator;
 import org.xenei.bloom.GeoNameHasher;
 import org.xenei.bloom.multidimensional.Container;
@@ -48,6 +48,7 @@ public class Demo {
     public static void main(String[] args) throws IOException, GeneralSecurityException
     {
         Demo demo = new Demo();
+        HashFunction hashFunction = new Murmur128x86Cyclic();
 
         System.out.println( String.format( "items: %s filters: %s", demo.container.getValueCount(), demo.container.getFilterCount()));
         try (BufferedReader reader =
@@ -57,8 +58,7 @@ public class Demo {
             String s = reader.readLine();
             while ( ! s.isEmpty() )
             {
-                Hasher.Builder builder = Factory.DEFAULT.useFunction( Murmur128.NAME )
-                        .with(  s );
+                Hasher.Builder builder = new DynamicHasher.Builder( hashFunction ).with(  s );
                 System.out.println( "Enter additional criteria (enter to search)");
                 s = reader.readLine();
                 while ( ! s.isEmpty() )
@@ -80,8 +80,7 @@ public class Demo {
         String s = reader.readLine();
         while ( s != null )
         {
-            Hasher hasher = Factory.DEFAULT.useFunction( Murmur128.NAME )
-                    .with( s ).build();
+            Hasher hasher = new DynamicHasher.Builder( hashFunction ).with( s ).build();
             System.out.println( String.format("%nSearch Results for [%s]:", s ));
             demo.getGeoNames(hasher).forEachRemaining( gn -> { System.out.println( String.format( "%s%n%n", gn ));});
             s = reader.readLine();
@@ -107,18 +106,13 @@ public class Demo {
                 Hasher hasher = GeoNameHasher.createHasher(geoName);
                 if (container.getValueCount() % 1000 == 0)
                 {
-                    System.out.println(
-                            String.format( "%s: %s names detected, %s per location %s max", container.getValueCount(), GeoNameHasher.names,
-                                    (1.0 * GeoNameHasher.names)/container.getValueCount(),
-                                    GeoNameHasher.maxNames));
+                    System.out.println( container.getValueCount());
                     sample.add( geoName );
                 }
                 container.put( hasher, encrypt( geoName ));
             }
         }
 
-        System.out.println( String.format( "%s names detected, %s per location", GeoNameHasher.names,
-                (1.0 * GeoNameHasher.names)/container.getValueCount()));
         System.out.println( GeoNameHasher.shape.toString() );
 
     }
