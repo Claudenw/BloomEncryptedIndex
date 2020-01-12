@@ -16,9 +16,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.collections4.Transformer;
 import org.apache.commons.collections4.bloomfilter.BloomFilter;
-import org.apache.commons.collections4.bloomfilter.Hasher;
 import org.apache.commons.collections4.bloomfilter.hasher.DynamicHasher;
 import org.apache.commons.collections4.bloomfilter.hasher.HashFunction;
+import org.apache.commons.collections4.bloomfilter.hasher.Hasher;
 import org.apache.commons.collections4.bloomfilter.hasher.function.Murmur128x86Cyclic;
 import org.apache.commons.collections4.iterators.TransformIterator;
 import org.xenei.bloom.GeoNameHasher;
