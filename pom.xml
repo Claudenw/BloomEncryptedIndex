@@ -19,7 +19,7 @@
 		</dependency>
 
 		<dependency>
-			<groupId>MultidimensionalBloom</groupId>
+			<groupId>org.xenei</groupId>
 			<artifactId>MultidimensionalBloom</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>

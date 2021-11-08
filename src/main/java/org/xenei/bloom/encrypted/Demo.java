@@ -10,16 +10,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.codec.digest.MurmurHash3;
 import org.apache.commons.collections4.Transformer;
-import org.apache.commons.collections4.bloomfilter.BloomFilter;
-import org.apache.commons.collections4.bloomfilter.hasher.DynamicHasher;
-import org.apache.commons.collections4.bloomfilter.hasher.HashFunction;
+import org.apache.commons.collections4.bloomfilter.BitMapProducer;
+import org.apache.commons.collections4.bloomfilter.Shape;
 import org.apache.commons.collections4.bloomfilter.hasher.Hasher;
-import org.apache.commons.collections4.bloomfilter.hasher.function.Murmur128x86Cyclic;
+import org.apache.commons.collections4.bloomfilter.hasher.HasherCollection;
+import org.apache.commons.collections4.bloomfilter.hasher.SimpleHasher;
 import org.apache.commons.collections4.iterators.TransformIterator;
 import org.xenei.bloom.GeoNameHasher;
 import org.xenei.bloom.multidimensional.Container;
@@ -38,10 +40,16 @@ public class Demo {
     private GeoName.Serde serde;
     private Ende ende;
 
+    public static SimpleHasher hasherFor(String s) {
+        long[] longs = MurmurHash3.hash128( s.getBytes( StandardCharsets.UTF_8 ));
+        return new SimpleHasher( longs[0], longs[1]);
+    }
+
     public static void main(String[] args) throws IOException, GeneralSecurityException
     {
         Demo demo = new Demo();
-        HashFunction hashFunction = new Murmur128x86Cyclic();
+        HasherCollection hashers = new HasherCollection();
+
 
         System.out.println( String.format( "items: %s filters: %s", demo.container.getValueCount(), demo.container.getFilterCount()));
         try (BufferedReader reader =
@@ -51,18 +59,20 @@ public class Demo {
             String s = reader.readLine();
             while ( ! s.isEmpty() )
             {
-                Hasher.Builder builder = new DynamicHasher.Builder( hashFunction ).with(  s );
+                hashers.add( hasherFor( s ));
+
                 System.out.println( "Enter additional criteria (enter to search)");
                 s = reader.readLine();
                 while ( ! s.isEmpty() )
                 {
-                    builder.with( s );
+                    hashers.add( hasherFor( s ));
                     System.out.println( "Enter additional criteria (enter to search)");
                     s = reader.readLine();
                 }
 
                 System.out.println( "\nSearch Results:");
-                demo.getGeoNames(builder.build()).forEachRemaining( gn -> { System.out.println( String.format( "%s%n%n", gn ));});
+
+                demo.getGeoNames(hashers).forEachRemaining( gn -> { System.out.println( String.format( "%s%n%n", gn ));});
                 System.out.println( "\nEnter criteria (enter to quit)");
                 s = reader.readLine();
             }
@@ -73,7 +83,7 @@ public class Demo {
         String s = reader.readLine();
         while ( s != null )
         {
-            Hasher hasher = new DynamicHasher.Builder( hashFunction ).with( s ).build();
+            Hasher hasher = hasherFor( s );
             System.out.println( String.format("%nSearch Results for [%s]:", s ));
             demo.getGeoNames(hasher).forEachRemaining( gn -> { System.out.println( String.format( "%s%n%n", gn ));});
             s = reader.readLine();
@@ -84,13 +94,14 @@ public class Demo {
 
     public Demo() throws IOException, GeneralSecurityException {
         Storage<byte[],UUID> storage = new InMemory<byte[],UUID>();
-        Index<UUID> index = new RangePacked<UUID>( new Func(), GeoNameHasher.shape );
-        container = new ContainerImpl<byte[],UUID>( GeoNameHasher.shape, storage, index );
+        Index<UUID> index = new RangePacked<UUID>( new Func(GeoNameHasher.shape ), GeoNameHasher.shape );
+        container = new ContainerImpl<byte[],UUID>( 1000000, GeoNameHasher.shape, storage, index );
         sample = new ArrayList<GeoName>();
         serde = new GeoName.Serde();
         SecretKeySpec secretKey = Ende_AES256.makeKey( "MySecretKey");
         ende = new Ende_AES256(secretKey);
         // populate the index.
+        int count = 0;
         try (GeoNameIterator iter = new GeoNameIterator( GeoNameIterator.DEFAULT_INPUT ))
         {
             while (iter.hasNext())
@@ -103,11 +114,12 @@ public class Demo {
                     sample.add( geoName );
                 }
                 container.put( hasher, encrypt( geoName ));
+                count++;
             }
         }
 
         System.out.print( GeoNameHasher.shape.toString() );
-        System.out.println( String.format( " p=%s", GeoNameHasher.shape.getProbability() ));
+        System.out.println( String.format( " p=%s", GeoNameHasher.shape.getProbability(count)));
 
     }
 
@@ -144,28 +156,36 @@ public class Demo {
      * A standard Func to use in testing where UUID creation is desired.
      *
      */
-    public static class Func implements Function<BloomFilter,UUID> {
+    public static class Func implements Function<BitMapProducer,UUID> {
+        private int numberOfBytes;
 
-        private byte[] getBytes( BloomFilter filter)
+        public Func(Shape shape) {
+            numberOfBytes = shape.getNumberOfBits() / Byte.SIZE + ((shape.getNumberOfBits() % Byte.SIZE) > 0?1:0);
+        }
+
+        private byte[] getBytes( BitMapProducer bitMapProducer)
         {
-            byte[] buffer = new byte[filter.getShape().getNumberOfBytes()];
-            long[] lBuffer = filter.getBits();
-            for (int i=0;i<buffer.length;i++)
-            {
-                int longIdx = i / Long.BYTES;
-                int longOfs = i % Long.BYTES;
-                if (longIdx >= lBuffer.length)
-                {
-                    return buffer;
+            byte[] buffer = new byte[numberOfBytes];
+
+            bitMapProducer.forEachBitMap( new LongConsumer() {
+            int idx = 0;
+            @Override
+            public void accept(long word) {
+                for (int longOfs=0;longOfs<Long.BYTES;longOfs++) {
+                    buffer[idx++] = (byte) ((word>>(Byte.SIZE * longOfs))  & 0xFFL);
+                    if (idx == numberOfBytes) {
+                        return;
+                    }
                 }
-                buffer[i] = (byte) ((lBuffer[longIdx]>>(Byte.SIZE * longOfs))  & 0xFFL);
             }
+
+            });
             return buffer;
         }
 
         @Override
-        public UUID apply(BloomFilter filter) {
-            return UUID.nameUUIDFromBytes(getBytes( filter ));
+        public UUID apply(BitMapProducer bitMapProducer) {
+            return UUID.nameUUIDFromBytes(getBytes( bitMapProducer ));
         }
 
     }
