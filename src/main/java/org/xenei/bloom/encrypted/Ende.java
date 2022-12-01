@@ -6,7 +6,6 @@ public interface Ende {
 
     public byte[] encrypt(byte[] plainText) throws GeneralSecurityException;
 
-
     public byte[] decrypt(byte[] cipherText) throws GeneralSecurityException;
 
 }

@@ -46,36 +46,25 @@ public class GeoName {
 
     @Override
     public String toString() {
-        return new StringBuilder()
-                .append( "ID: ").append( geonameid ).append( "\n" )
-                .append( "Name:" ).append( name ).append( "\n" )
-                .append( "Ascii name: ").append( asciiname ).append( "\n" )
-                .append( "Alternate names: ").append( alternatenames ).append( "\n" )
-                .append( "Latitude: ").append( latitude ).append( "\n" )
-                .append( "Longitude: ").append( longitude ).append( "\n" )
-                .append( "Feature class: ").append( feature_class ).append( "\n" )
-                .append( "Feature code: ").append( feature_code ).append( "\n" )
-                .append( "Country code: ").append( country_code ).append( "\n" )
-                .append( "Country code2: ").append( cc2 ).append( "\n" )
-                .append( "Admin code1: ").append( admin1_code ).append( "\n" )
-                .append( "Admin code2: ").append( admin2_code ).append( "\n" )
-                .append( "Admin code3: ").append( admin3_code ).append( "\n" )
-                .append( "Admin code4: ").append( admin4_code ).append( "\n" )
-                .append( "Population: ").append( population ).append( "\n" )
-                .append( "Elevation: ").append( elevation ).append( "\n" )
-                .append( "Dem: ").append( dem ).append( "\n" )
-                .append( "Timezone: ").append( timezone ).append( "\n" )
-                .append( "Modification date: ").append( modification_date).toString()
-                .toString();
+        return new StringBuilder().append("ID: ").append(geonameid).append("\n").append("Name:").append(name)
+                .append("\n").append("Ascii name: ").append(asciiname).append("\n").append("Alternate names: ")
+                .append(alternatenames).append("\n").append("Latitude: ").append(latitude).append("\n")
+                .append("Longitude: ").append(longitude).append("\n").append("Feature class: ").append(feature_class)
+                .append("\n").append("Feature code: ").append(feature_code).append("\n").append("Country code: ")
+                .append(country_code).append("\n").append("Country code2: ").append(cc2).append("\n")
+                .append("Admin code1: ").append(admin1_code).append("\n").append("Admin code2: ").append(admin2_code)
+                .append("\n").append("Admin code3: ").append(admin3_code).append("\n").append("Admin code4: ")
+                .append(admin4_code).append("\n").append("Population: ").append(population).append("\n")
+                .append("Elevation: ").append(elevation).append("\n").append("Dem: ").append(dem).append("\n")
+                .append("Timezone: ").append(timezone).append("\n").append("Modification date: ")
+                .append(modification_date).toString().toString();
     }
 
     public static class Serde {
-        public GeoName deserialize( String txt )
-        {
-            String[] parts = txt.split( "\t");
-            if (parts.length != 19)
-            {
-                System.out.println( "too short");
+        public GeoName deserialize(String txt) {
+            String[] parts = txt.split("\t");
+            if (parts.length != 19) {
+                System.out.println("too short");
             }
             GeoName retval = new GeoName();
             retval.geonameid = parts[0];
@@ -100,26 +89,16 @@ public class GeoName {
             return retval;
         }
 
-        public String serialize( GeoName geoname) {
-            return new StringBuffer( geoname.geonameid ).append( "\t" )
-                    .append( geoname.name ).append( "\t" )
-                    .append( geoname.asciiname ).append( "\t" )
-                    .append( geoname.alternatenames ).append( "\t" )
-                    .append( geoname.latitude ).append( "\t" )
-                    .append( geoname.longitude ).append( "\t" )
-                    .append( geoname.feature_class ).append( "\t" )
-                    .append( geoname.feature_code ).append( "\t" )
-                    .append( geoname.country_code ).append( "\t" )
-                    .append( geoname.cc2 ).append( "\t" )
-                    .append( geoname.admin1_code ).append( "\t" )
-                    .append( geoname.admin2_code ).append( "\t" )
-                    .append( geoname.admin3_code ).append( "\t" )
-                    .append( geoname.admin4_code ).append( "\t" )
-                    .append( geoname.population ).append( "\t" )
-                    .append( geoname.elevation ).append( "\t" )
-                    .append( geoname.dem ).append( "\t" )
-                    .append( geoname.timezone ).append( "\t" )
-                    .append( geoname.modification_date).toString();
+        public String serialize(GeoName geoname) {
+            return new StringBuffer(geoname.geonameid).append("\t").append(geoname.name).append("\t")
+                    .append(geoname.asciiname).append("\t").append(geoname.alternatenames).append("\t")
+                    .append(geoname.latitude).append("\t").append(geoname.longitude).append("\t")
+                    .append(geoname.feature_class).append("\t").append(geoname.feature_code).append("\t")
+                    .append(geoname.country_code).append("\t").append(geoname.cc2).append("\t")
+                    .append(geoname.admin1_code).append("\t").append(geoname.admin2_code).append("\t")
+                    .append(geoname.admin3_code).append("\t").append(geoname.admin4_code).append("\t")
+                    .append(geoname.population).append("\t").append(geoname.elevation).append("\t").append(geoname.dem)
+                    .append("\t").append(geoname.timezone).append("\t").append(geoname.modification_date).toString();
         }
     }
 

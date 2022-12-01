@@ -49,8 +49,7 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
             } catch (IOException e) {
                 return false;
             }
-            if (s == null)
-            {
+            if (s == null) {
                 return false;
             }
             next = serde.deserialize(s);
@@ -66,8 +65,7 @@ public class GeoNameIterator implements Iterator<GeoName>, AutoCloseable {
             } finally {
                 next = null;
             }
-        } else {
-            throw new NoSuchElementException();
         }
+        throw new NoSuchElementException();
     }
 }
